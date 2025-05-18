@@ -11,5 +11,7 @@
     "strictPropertyInitialization": false,
     "skipLibCheck": true,
     "noImplicitAny": false
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "prisma"]
 }

@@ -11,32 +11,45 @@ import {
   FormMessage,
   Input,
   Textarea,
-} from "./ui";
+} from "@/components/ui";
 import { forumSchema, type IForumSchema } from "@/schema";
 import { ForumAPI } from "@/api";
 import { useAuth } from "@clerk/clerk-react";
+import { type IForumWithRelations } from "@/interfaces";
 import { useNavigate } from "react-router-dom";
 
-export const CreateForumForm = () => {
+interface EditForumFormProps {
+  forum: IForumWithRelations;
+}
+
+export const EditForumForm = ({ forum }: EditForumFormProps) => {
   const { getToken } = useAuth();
   const navigate = useNavigate();
+
   const form = useForm<IForumSchema>({
     resolver: zodResolver(forumSchema),
     defaultValues: {
-      title: "",
-      content: "",
-      tags: "",
+      title: forum.title,
+      content: forum.description,
+      tags: forum.tags || "",
     },
   });
 
   const handleSubmission = useCallback(
     async (payload: IForumSchema) => {
       const token = await getToken();
-
-      await ForumAPI.createForum(token!, payload);
-      navigate("/");
+      if (!token) {
+        console.log("please login");
+        return;
+      }
+      try {
+        await ForumAPI.updateForum(token, forum.id, payload);
+        navigate("/");
+      } catch (error) {
+        console.error("Failed to update forum:", error);
+      }
     },
-    [getToken, navigate]
+    [getToken, forum.id, navigate]
   );
 
   return (
@@ -87,12 +100,8 @@ export const CreateForumForm = () => {
             </FormItem>
           )}
         />
-        <Button
-          type="submit"
-          className="text-muted-foreground"
-          disabled={form.formState.isSubmitting}
-        >
-          {form.formState.isSubmitting ? "Submitting...!" : "Submit"}
+        <Button type="submit" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? "Updating..!" : "Update Discussion"}
         </Button>
       </form>
     </Form>

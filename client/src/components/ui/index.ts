@@ -3,3 +3,8 @@ export * from "./form";
 export * from "./label";
 export * from "./input";
 export * from "./textarea";
+export * from "./avatar";
+export * from "./badge";
+export * from "./card";
+export * from "./skeleton";
+export * from "./sonner";
