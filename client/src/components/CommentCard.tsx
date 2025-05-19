@@ -1,10 +1,18 @@
+import { useState, useCallback } from "react";
 import { format } from "date-fns";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import {
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+  Card,
+  CardHeader,
+  CardContent,
+  Button,
+  Textarea,
+} from "@/components/ui";
 import type { ICommentWithRelations } from "@/interfaces";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit, Check, X, Loader2 } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
-import { useCallback } from "react";
 import { toast } from "sonner";
 import { ForumAPI } from "@/api";
 
@@ -15,24 +23,61 @@ interface CommentCardProps {
 
 export function CommentCard({ comment, onCommentDelete }: CommentCardProps) {
   const { userId, getToken } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(comment.content);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const isCreator = comment.userId === userId;
 
   const handleCommentDeletion = useCallback(async () => {
     try {
       const token = await getToken();
-      if (!token) {
-        throw new Error("auth token is missing");
-      }
+      if (!token) throw new Error("auth token is missing");
       await ForumAPI.deleteComment(token, comment.id);
       onCommentDelete();
-      toast("Your comment has been deleted.");
+      toast.success("Your comment has been deleted.");
     } catch (err) {
-      console.error("Failed to post comment:", err);
-      toast("Failed to post comment. Please try again.");
+      console.error("Failed to delete comment:", err);
+      toast.error("Failed to delete comment. Please try again.");
     }
   }, [getToken, comment.id, onCommentDelete]);
+
+  const handleEditToggle = () => {
+    setIsEditing(!isEditing);
+    if (!isEditing) {
+      setEditedContent(comment.content);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (editedContent.trim() === comment.content) {
+      setIsEditing(false);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("auth token is missing");
+      await ForumAPI.editComment(token, comment.id, editedContent);
+      setIsEditing(false);
+      onCommentDelete();
+      toast.success("Comment updated successfully");
+    } catch (err) {
+      console.error("Failed to update comment:", err);
+      toast.error("Failed to update comment. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedContent(comment.content);
+  };
+
   return (
-    <Card>
+    <Card className="relative">
       <CardHeader className="flex flex-row items-center gap-3 pb-2">
         <Avatar>
           <AvatarImage
@@ -53,18 +98,59 @@ export function CommentCard({ comment, onCommentDelete }: CommentCardProps) {
               {format(new Date(comment.createdAt), "MMMM d, yyyy")}
             </p>
           </div>
-          {isCreator && (
-            <Trash2
-              className="cursor-pointer"
-              onClick={handleCommentDeletion}
-            />
+          {isCreator && !isEditing && (
+            <div className="flex gap-2">
+              <Edit
+                className="h-4 w-4 cursor-pointer"
+                onClick={handleEditToggle}
+              />
+              <Trash2
+                className="h-4 w-4 cursor-pointer"
+                onClick={handleCommentDeletion}
+              />
+            </div>
           )}
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-sm whitespace-pre-line text-left">
-          {comment.content}
-        </p>
+        {isEditing ? (
+          <div className="space-y-3">
+            <Textarea
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              className="min-h-[100px]"
+              disabled={isSubmitting}
+            />
+            <div className="flex justify-end gap-2">
+              <Button onClick={handleCancelEdit} disabled={isSubmitting}>
+                <X className="mr-2 h-4 w-4" />
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveEdit}
+                disabled={
+                  isSubmitting || editedContent.trim() === comment.content
+                }
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm whitespace-pre-line text-left">
+            {comment.content}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

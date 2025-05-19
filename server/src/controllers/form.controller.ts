@@ -320,3 +320,50 @@ export const deleteForumController = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const editCommentController = async (req: Request, res: Response) => {
+  try {
+    const { commentId } = req.params;
+    const { content } = req.body;
+    const { clerkId } = req.authUser!;
+
+    if (!commentId || !content) {
+      res.status(HttpStatusCodes.BAD_REQUEST).json({
+        message: "Comment ID and content are required",
+      });
+      return;
+    }
+
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      res.status(HttpStatusCodes.NOT_FOUND).json({
+        message: "Comment not found",
+      });
+      return;
+    }
+
+    if (comment.userId !== clerkId) {
+      res.status(HttpStatusCodes.BAD_REQUEST).json({
+        message: "You can only edit your own comments",
+      });
+      return;
+    }
+
+    const updatedComment = await prisma.comment.update({
+      where: { id: commentId },
+      data: { content },
+    });
+
+    res.status(HttpStatusCodes.OK).json({
+      comment: updatedComment,
+    });
+  } catch (error) {
+    console.error("Error editing comment:", error);
+    res.status(HttpStatusCodes.INTERNAL_ERROR).json({
+      message: "Something went wrong",
+    });
+  }
+};

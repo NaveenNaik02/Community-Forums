@@ -4,6 +4,7 @@ import {
   createForumController,
   deleteCommentController,
   deleteForumController,
+  editCommentController,
   editForumController,
   getForumByIdController,
   getForumsController,
@@ -23,6 +24,7 @@ forumRouter.post(
   authenticateUser,
   createCommentController
 );
+forumRouter.put("/comment/:commentId", authenticateUser, editCommentController);
 forumRouter.delete(
   "/comment/:commentId",
   authenticateUser,

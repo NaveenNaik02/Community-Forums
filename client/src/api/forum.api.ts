@@ -56,6 +56,14 @@ export const ForumAPI = {
     return response.data;
   },
 
+  editComment: async (token: string, commentId: string, content: string) => {
+    const axios = AuthenticatedAxios(token);
+    const response = await axios.put(`/forums/comment/${commentId}`, {
+      content,
+    });
+    return response.data;
+  },
+
   deleteForum: async (token: string, forumId: string) => {
     const axios = AuthenticatedAxios(token);
     const response = await axios.delete(`/forums/${forumId}`);
